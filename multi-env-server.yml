@@ -60,10 +60,29 @@ jobs:
         if: steps.cache-nodemodules.outputs.cache-hit != 'true'
         run: |
           npm ci --force
+
+        if: input deploy == 'DEV'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages:  javascript
+      
           
       - name: Build Application
         run: |
           npm run build:dev
+     
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+        if: input deploy == 'QA'
+
+      - name: Build Application
+        run: |
+          npm run build:QA 
+
           
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
