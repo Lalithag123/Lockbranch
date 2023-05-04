@@ -1,0 +1,176 @@
+name: Multi-Env-DEV-Node/CM/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      NodeValue:
+        type: boolean
+        description: "is Node Server deploy requried?,select checkbox if required"
+        default: true 
+      CMValue:
+        type: boolean
+        description: "is CM Server deploy requried?,select checkbox if required"
+        default: false
+      CDValue:
+        type: boolean
+        description: "is CD Server deploy requried?,select checkbox if required"
+        default: false
+#env:
+  #nodewebappname: ie-dev-eschein
+  #cmwebappname: mc-045a2475-f692-42d4-a7c0-9647-cm
+  #cdwebappname: mc-045a2475-f692-42d4-a7c0-9647-cd
+  #packagepath: 'dist'
+  #outputfolder: './output'
+  #angularappname: 'HSGEPAngularJSS'
+  #nodeversion: '16.x'
+  #buildenv:
+  #nodepubliccred: ${{ secrets.IE_DEV_CREDENTIALS }}
+  #cmpubliccred: ${{ secrets.AZURE_DEV_CM_CREDENTIALS }}
+  #cdpubliccred: ${{ secrets.AZURE_DEV_CD_CREDENTIALS }}
+  
+jobs:  
+  Build:
+    runs-on: ubuntu-latest
+    #environment: ${{ inputs.Deploy-to }}
+    #name: Run DEV Node Server Build
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Use Node.JS ${{ env.nodeversion }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.nodeversion }}
+
+      - name: Cache NodeJS modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules-DEV
+        with:
+          # caching node_modules
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+            
+      - name: Install Dependencies
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --force
+
+          if: input deploy == 'DEV'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages:  javascript
+      
+          
+      - name: Build Application
+        run: |
+          npm run build:dev
+     
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+        if: input deploy == 'QA'
+
+      - name: Build Application
+        run: |
+          npm run build:QA 
+
+          
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist_DEV
+          retention-days: 15
+          path: |
+            ./${{ env.packagepath }}
+  NodeServer:
+    needs: Build
+    if: ${{ github.event.inputs.CMValue == 'true' }}
+    runs-on: ubuntu-latest
+    #environment: ${{ inputs.Deploy-to }}
+    #name: Run DEV Node Server Build
+    steps:
+    - name: Downloading build files
+      uses: actions/download-artifact@v3
+      with:
+        name: dist_DEV
+    
+    - name: Display structure of downloaded files
+      run: ls -R
+
+    - name: Create the folder for deployment
+      run: |
+        mkdir ${{ env.outputfolder }}
+        cp -R ${{ env.packagepath }} ${{ env.outputfolder }}/${{ env.nodewebappname }}/
+        rm -r ${{ env.packagepath }}/*
+        mkdir ${{ env.packagepath }}/${{ env.packagepath }}
+        cp -R ${{ env.outputfolder}}/${{ env.nodewebappname}} ${{ env.packagepath }}/${{ env.packagepath }}/${{ env.nodewebappname }}/
+
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.nodewebappname }}
+        publish-profile: ${{ env.nodepubliccred }}
+        package: ./${{ env.packagepath }}
+  CMDeploy:
+    needs: Build
+    if: ${{ github.event.inputs.CMValue == 'true' }}
+    runs-on: ubuntu-latest
+    #environment: ${{ inputs.Deploy-to }}
+    #name: Run DEV CM Server Build
+    steps:
+    - name: Downloading build files
+      uses: actions/download-artifact@v3
+      with:
+        name: dist_DEV
+    
+    - name: Display structure of downloaded files
+      run: ls -R
+    - name: Create the folder for deployment
+      run: |
+        mkdir ${{ env.outputfolder }}
+        cp -R ${{ env.packagepath }} ${{ env.outputfolder }}/${{ env.cmwebappname }}/
+        rm -r ${{ env.packagepath }}/*
+        mkdir ${{ env.packagepath }}/${{ env.packagepath }}
+        cp -R ${{ env.outputfolder}}/${{ env.cmwebappname}} ${{ env.packagepath }}/${{ env.packagepath }}/${{ env.cmwebappname }}/
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.cmwebappname }}
+        publish-profile: ${{ env.cmpubliccred }}
+        package: ./${{ env.packagepath }}
+  CDDeploy:
+    needs: Build
+    if: ${{ github.event.inputs.CDValue == 'true' }}
+    runs-on: ubuntu-latest
+    #environment: ${{ inputs.Deploy-to }}
+    name: Run DEV CD Server Build
+    steps:
+    - name: Downloading build files
+      uses: actions/download-artifact@v3
+      with:
+        name: dist_DEV
+    
+    - name: Display structure of downloaded files
+      run: ls -R
+    - name: Create the folder for deployment
+      run: |
+        mkdir ${{ env.outputfolder }}
+        cp -R ${{ env.packagepath }} ${{ env.outputfolder }}/${{ env.cdwebappname }}/
+        rm -r ${{ env.packagepath }}/*
+        mkdir ${{ env.packagepath }}/${{ env.packagepath }}
+        cp -R ${{ env.outputfolder}}/${{ env.cdwebappname}} ${{ env.packagepath }}/${{ env.packagepath }}/${{ env.cdwebappname }}/
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.cdwebappname }}
+        publish-profile: ${{ env.cdpubliccred }}
+        package: ./${{ env.packagepath }}
