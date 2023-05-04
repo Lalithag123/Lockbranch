@@ -61,7 +61,7 @@ jobs:
         run: |
           npm ci --force
 
-        if: input deploy == 'DEV'
+          if: input deploy == 'DEV'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
