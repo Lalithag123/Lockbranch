@@ -1,0 +1,56 @@
+name: Angular-CI
+
+on:
+  push:
+  workflow_dispatch:
+     inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags' 
+  # workflow_dispatch:
+      
+env:
+  NODE_VERSION: '16.x'
+  
+jobs:
+  Angular-CI:
+    name: Run CI Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache node modules
+        id: cache-nodemodules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules-DEV
+        with:
+          # caching node_modules
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+            
+      - name: Install Dependencies
+        if: steps.cache-nodemodules.outputs.cache-hit != 'true'
+        run: |
+          npm install --force
+          
+      - name: Build
+        run: |
+          npm run build:dev
+          
+          
+#      - name: Lint
+#        run: |
+#          npm run lint -- --fix
