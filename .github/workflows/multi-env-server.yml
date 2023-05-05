@@ -61,7 +61,8 @@ jobs:
         run: |
           npm ci --force
 
-          if: input deploy == 'DEV'
+           environment: ${{ inputs.Deploy-to }}
+           name: inputs.deploy == 'DEV'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
@@ -76,12 +77,6 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
-
-        if: input deploy == 'QA'
-
-      - name: Build Application
-        run: |
-          npm run build:QA 
 
           
       - name: Archive build artifacts
