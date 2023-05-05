@@ -71,9 +71,9 @@ jobs:
         run: |
           npm run build:dev 
 
+      - name: Run DEV Build
         environment: ${{ inputs.Deploy-to == "DEV" }}
-      - name: Run DEV Node Server Build
- 
+ 
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
