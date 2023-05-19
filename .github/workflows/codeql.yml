@@ -1,4 +1,4 @@
-name: merge pull requst
+name: merge pull request
 on:
   pull_request:
     types: [closed]
@@ -10,5 +10,10 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-    - run: |
-        echo The PR was merged
+    - name: checkout repository
+      uses: actions/checkout@v2
+
+    - name: merge pull request
+    
+    
+    
